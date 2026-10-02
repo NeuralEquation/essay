@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-01T13:45:31.459Z",
+  "browser": "Google Chrome (Playwright)",
+  "url": "http://127.0.0.1:5173/",
+  "passed": [
+    "single HTML, no external requests, valid unique question IDs",
+    "all slots initially hidden; only tapped slot opens; closing hides details",
+    "show all / hide all / random hides exactly 1–3 rows, for every pattern",
+    "no answer or rating controls before reveal, for all 26 questions",
+    "self-evaluation saves counters and timestamp; survives reload",
+    "priority fail > unsure > unseen > good; avoids immediate repeats",
+    "10-question session, streak, filter behavior and completion",
+    "reset cancellation preserves records; confirmation resets only app data",
+    "keyboard buttons retain focus and work with Enter",
+    "no horizontal overflow at 320/360/390/768px on home, study, every test type",
+    "system dark mode and manual theme toggle",
+    "offline operation after page loaded",
+    "corrupt storage is preserved until explicit reset",
+    "blocked storage degrades safely and displays a warning"
+  ],
+  "consoleErrors": [],
+  "fileProtocolTested": false,
+  "realAndroidDeviceTested": false
+}
