@@ -1,6 +1,6 @@
 'use strict';
 // Bump VERSION when deploying changes to the offline app shell.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const PREFIX = 'eiken-body-trainer:' + self.registration.scope + ':';
 const CACHE = PREFIX + VERSION;
 const base = self.registration.scope;

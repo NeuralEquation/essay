@@ -6,6 +6,7 @@ const os=require('node:os');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'C:/Users/katat/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const checks=[];
 let update=false;
+const originalVersion=fs.readFileSync(path.join(__dirname,'sw.js'),'utf8').match(/const VERSION = '([^']+)'/)[1];
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');
  if(!url.pathname.startsWith('/essay/')){res.writeHead(404);res.end();return;}
@@ -13,7 +14,7 @@ const server=http.createServer((req,res)=>{
  const allowed=['index.html','sw.js','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/apple-touch-icon.png'];
  if(!allowed.includes(name)){res.writeHead(404);res.end();return;}
  let bytes=fs.readFileSync(path.join(__dirname,name));
- if(name==='sw.js'&&update)bytes=Buffer.from(bytes.toString().replace("const VERSION = 'v1';","const VERSION = 'test-v2';"));
+ if(name==='sw.js'&&update)bytes=Buffer.from(bytes.toString().replace(/const VERSION = '[^']+';/,"const VERSION = 'test-update';"));
  res.setHeader('Content-Type',name.endsWith('.html')?'text/html; charset=utf-8':name.endsWith('.js')?'text/javascript':name.endsWith('.png')?'image/png':'application/manifest+json');
  res.setHeader('Cache-Control','no-store');res.end(bytes);
 });
@@ -34,9 +35,11 @@ async function check(name,fn){await fn();checks.push(name);console.log('PASS '+n
   await check('valid standalone manifest, relative launch URL and raster icons',async()=>{
    const manifest=await (await context.request.get(url+'manifest.webmanifest')).json();
    assert.equal(manifest.display,'standalone');assert.equal(new URL(manifest.start_url,url).href,url);
+   assert.equal(manifest.id,'/essay/');
    assert.equal(new URL(manifest.scope,url).href,url);assert.equal(manifest.icons.length,2);
    for(const icon of manifest.icons){const r=await context.request.get(new URL(icon.src,url).href);assert.equal(r.status(),200);const bytes=await r.body();const n=Number(icon.sizes.split('x')[0]);assert.equal(bytes.readUInt32BE(16),n);assert.equal(bytes.readUInt32BE(20),n);assert(icon.purpose.includes('maskable'));}
    const cdp=await context.newCDPSession(page);const installability=await cdp.send('Page.getInstallabilityErrors');assert.deepEqual(installability.installabilityErrors,[]);
+   const parsed=await cdp.send('Page.getAppManifest');assert.equal(parsed.manifest.id,url);
   });
   await page.locator('.navigation [data-view="test"]').click();await page.locator('[data-action="reveal"]').click();await page.locator('[data-rating="good"]').click();
   await check('offline cold page open, query navigation, test and persisted progress',async()=>{
@@ -60,7 +63,7 @@ async function check(name,fn){await fn();checks.push(name);console.log('PASS '+n
    assert.equal(await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return r.waiting?.state;}),'installed');
    await Promise.all([page.waitForNavigation(),page.locator('#pwa-update').click()]);
    assert.equal(await page.evaluate(()=>localStorage.getItem('eiken-body-trainer.learning.v1')),stored);
-   const keys=await page.evaluate(()=>caches.keys());assert(keys.includes('other-pwa-cache'));assert(keys.some(k=>k.endsWith(':test-v2')));assert(!keys.some(k=>k.startsWith('eiken-body-trainer:')&&k.endsWith(':v1')));
+   const keys=await page.evaluate(()=>caches.keys());assert(keys.includes('other-pwa-cache'));assert(keys.some(k=>k.endsWith(':test-update')));assert(!keys.some(k=>k.startsWith('eiken-body-trainer:')&&k.endsWith(':'+originalVersion)));
    await context.setOffline(true);await page.reload();assert.equal(await page.evaluate(()=>localStorage.getItem('eiken-body-trainer.learning.v1')),stored);await context.setOffline(false);
   });
   assert.deepEqual(errors,[]);
