@@ -25,6 +25,7 @@ async function check(name,fn){await fn();checks.push(name);console.log('PASS '+n
  const context=await chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.tmpdir(),'eiken-pwa-')),{headless:true,viewport:{width:390,height:844},executablePath:process.env.CHROMIUM_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe'});
  try{
   let page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(()=>{if(!location.pathname.endsWith('/install.html'))addEventListener('beforeinstallprompt',e=>{e.preventDefault();e.stopImmediatePropagation();},true);});
   await page.goto(url);
   await page.waitForFunction(()=>navigator.serviceWorker.controller!==null);
   await check('worker activated with /essay/ scope; app shell cached',async()=>{

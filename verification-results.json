@@ -1,11 +1,12 @@
 {
-  "checkedAt": "2026-10-02T05:22:05.861Z",
+  "checkedAt": "2026-10-02T15:17:09.149Z",
   "browser": "Google Chrome (Playwright)",
   "url": "http://127.0.0.1:5173/",
   "passed": [
     "embedded learning app, only local PWA assets, valid unique question IDs",
     "all slots initially hidden; only tapped slot opens; closing hides details",
     "show all / hide all / random hides exactly 1–3 rows, for every pattern",
+    "C learning card shows the new four bases, including both conditional forms",
     "no answer or rating controls before reveal, for all 26 questions",
     "self-evaluation saves counters and timestamp; survives reload",
     "priority fail > unsure > unseen > good; avoids immediate repeats",

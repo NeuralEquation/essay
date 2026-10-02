@@ -57,6 +57,45 @@ async function check(name, run) { await run(); results.push(name); console.log('
     }
    }
   });
+  await check('C learning card shows the new four bases, including both conditional forms',async()=>{
+   const before=await page.evaluate(()=>QUESTIONS.map(q=>q.id));
+   assert.equal(new Set(before).size,26);
+   assert.deepEqual(await page.evaluate(()=>QUESTIONS.filter(q=>q.pattern==='C').map(q=>q.id)),['C-whole','C-slot-0','C-slot-1','C-slot-2','C-slot-3','C-alt-0','C-alt-1','C-alt-2','C-alt-3']);
+   if(await page.locator('[data-action="pattern"][data-pattern="C"]').getAttribute('aria-expanded')==='false') await page.locator('[data-action="pattern"][data-pattern="C"]').click();
+   await page.locator('[data-action="all"][data-pattern="C"][data-show="yes"]').click();
+   const slots=page.locator('#pattern-C .slot-toggle .english');
+   assert.deepEqual(await slots.allInnerTexts(),['Finally, ...','When ..., S can ...\nIf ..., S can/could ...','By -ing, S can/could ...','This would help ...']);
+   assert.equal(await page.locator('#pattern-C .slot-toggle[aria-expanded="true"]').count(),4);
+   await page.locator('[data-action="all"][data-pattern="C"][data-show="no"]').click();
+   assert.equal(await page.locator('#pattern-C .slot-toggle[aria-expanded="false"]').count(),4);
+   await page.locator('[data-action="slot"][data-id="C-1"]').click();
+   assert.equal(await page.locator('#pattern-C .slot-toggle[aria-expanded="true"]').count(),1);
+   await page.locator('[data-action="detail"][data-id="C-1"][data-kind="explain"]').click();
+   assert.equal(await page.locator('[data-action="detail"][data-id="C-1"][data-kind="alternatives"]').innerText(),'助動詞ルールを見る');
+   const explanation=await page.locator('#C-1-explain').innerText();
+   for(const rule of ['When + 現在形','後半は基本 can','If + 現在形','can または could','If + 過去形, would'])assert(explanation.includes(rule),rule);
+   await page.locator('[data-action="detail"][data-id="C-1"][data-kind="examples"]').click();
+   for(const example of ['When people have access','schools can improve','schools could improve'])assert((await page.locator('#C-1-examples').innerText()).includes(example),example);
+   await page.locator('[data-action="slot"][data-id="C-1"]').click();
+   assert.equal(await page.locator('#pattern-C .slot-toggle[aria-expanded="true"]').count(),0);
+   await page.locator('[data-action="slot"][data-id="C-2"]').click();
+   await page.locator('[data-action="detail"][data-id="C-2"][data-kind="explain"]').click();
+   const means=await page.locator('#C-2-explain').innerText();
+   assert(means.includes('一般的・実際の効果なら can'));assert(means.includes('控えめな可能性なら could'));
+   await page.locator('[data-action="detail"][data-id="C-2"][data-kind="examples"]').click();
+   const examples=await page.locator('#C-2-examples').innerText();assert(examples.includes('governments can reduce traffic congestion'));assert(examples.includes('governments could improve access to education'));
+   await page.locator('[data-action="slot"][data-id="C-2"]').click();
+   await page.locator('[data-action="slot"][data-id="C-3"]').click();
+   await page.locator('[data-action="detail"][data-id="C-3"][data-kind="explain"]').click();
+   assert((await page.locator('#C-3-explain').innerText()).includes('まず覚える基本形'));
+   await page.locator('[data-action="detail"][data-id="C-3"][data-kind="examples"]').click();
+   assert((await page.locator('#C-3-examples').innerText()).includes('This would help protect public health.'));
+   const idsAfter=await page.evaluate(()=>QUESTIONS.map(q=>q.id));assert.deepEqual(idsAfter,before);
+   assert.deepEqual(await page.evaluate(()=>PATTERNS.filter(p=>p.id==='A'||p.id==='B').map(p=>p.slots.map(s=>s.base))),[
+    ['First of all, ...','S + V ...','This allows A to V.','As a result, ...'],
+    ['Additionally, ...','V-ing ... can ...','This, in turn, can ...','Such an improvement can ...']
+   ]);
+  });
   await check('no answer or rating controls before reveal, for all 26 questions',async()=>{
    await page.locator('.navigation [data-view="test"]').click();
    const ids=await page.evaluate(()=>QUESTIONS.map(q=>q.id));
@@ -67,16 +106,25 @@ async function check(name, run) { await run(); results.push(name); console.log('
     const q=await page.evaluate(()=>({kind:current.kind,line:PATTERNS.find(p=>p.id===current.pattern).context[current.slot],base:PATTERNS.find(p=>p.id===current.pattern).slots[current.slot]?.base}));
     if(q.kind==='slot') assert(!(await page.locator('.test-card').innerText()).includes(q.line));
     if(q.kind==='whole') assert.equal(await page.locator('.test-card .english').count(),0);
+    if(id==='C-whole') for(const answer of ['Finally, ...','When ..., S can ...','If ..., S can/could ...','By -ing, S can/could ...','This would help ...'])assert(!(await page.locator('.test-card').innerText()).includes(answer));
+    if(id==='C-alt-1')assert(!(await page.locator('.test-card').innerText()).includes('When + 現在形'));
+    if(id==='C-alt-2')assert(!(await page.locator('.test-card').innerText()).includes('By -ingの後の助動詞'));
     await page.locator('[data-action="reveal"]').click();
     assert(await page.locator('#test-answer').isVisible());
     assert.equal(await page.locator('[data-action="rate"]').count(),3);
     if(q.kind==='slot') assert((await page.locator('#test-answer').innerText()).includes(q.line));
+    if(id==='C-whole'){
+     for(const answer of ['Finally, ...','When ..., S can ...','If ..., S can/could ...','By -ing, S can/could ...','This would help ...'])assert((await page.locator('#test-answer').innerText()).includes(answer));
+     assert((await page.locator('#test-answer .context-row').nth(1).innerText()).includes('\nIf ..., S can/could ...'));
+    }
+    if(id==='C-alt-1')for(const answer of ['When + 現在形 → 後半は基本 can','If + 現在形 → 後半は can / could'])assert((await page.locator('#test-answer').innerText()).includes(answer));
+    if(id==='C-alt-2')for(const answer of ['一般的・実際の効果 → can','少し控えめな可能性 → could'])assert((await page.locator('#test-answer').innerText()).includes(answer));
     await page.locator('[data-action="reveal"]').click();
     assert.equal(await page.locator('#test-answer .english').count(),0);
    }
   });
   await check('self-evaluation saves counters and timestamp; survives reload',async()=>{
-   await page.evaluate(()=>{state=emptyState();storageBlocked=false;filter='whole';patternFilter='A';startSession();render();});
+   await page.evaluate(()=>{state=emptyState();state.records['C-alt-1']={asked:4,good:2,unsure:1,fail:1,lastRating:'unsure',lastStudy:'2026-10-02T10:00:00.000Z'};state.records['C-alt-2']={asked:2,good:2,unsure:0,fail:0,lastRating:'good',lastStudy:'2026-10-02T10:05:00.000Z'};storageBlocked=false;save();filter='whole';patternFilter='A';startSession();render();});
    await page.locator('[data-action="reveal"]').click();
    await page.locator('[data-action="rate"][data-rating="fail"]').click();
    let saved=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)),KEY);
@@ -88,7 +136,9 @@ async function check(name, run) { await run(); results.push(name); console.log('
    assert(Number.isFinite(Date.parse(saved.records['A-whole'].lastStudy)));
    await page.reload();
    assert.equal(await page.evaluate(()=>state.records['A-whole'].fail),1);
-   assert((await page.locator('.stats').innerText()).includes('1'));
+   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem(KEY)).records['C-alt-1'].unsure),1);
+   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem(KEY)).records['C-alt-2'].good),2);
+   assert.match(await page.locator('.stat strong').first().innerText(),/^3/);
   });
   await check('priority fail > unsure > unseen > good; avoids immediate repeats',async()=>{
    const result=await page.evaluate(()=>{
