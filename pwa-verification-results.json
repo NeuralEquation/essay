@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-02T05:23:06.469Z",
+  "browser": "Google Chrome (Playwright)",
+  "scope": "/essay/",
+  "passed": [
+    "worker activated with /essay/ scope; app shell cached",
+    "valid standalone manifest, relative launch URL and raster icons",
+    "offline cold page open, query navigation, test and persisted progress",
+    "manual install help expands accessibly and remains within mobile width",
+    "updated worker waits for user; update preserves learning and other caches"
+  ],
+  "consoleErrors": [],
+  "realDeviceInstallTested": false
+}

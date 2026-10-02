@@ -16,11 +16,11 @@ async function check(name, run) { await run(); results.push(name); console.log('
   const requests=[];
   page.on('request',r=>requests.push(r.url()));
   await page.goto('http://127.0.0.1:5173/');
-  await check('single HTML, no external requests, valid unique question IDs', async()=>{
+  await check('embedded learning app, only local PWA assets, valid unique question IDs', async()=>{
    assert(requests.every(u=>u.startsWith('http://127.0.0.1:5173/')));
    assert.equal(await page.evaluate(()=>QUESTIONS.length),26);
    assert.equal(await page.evaluate(()=>new Set(QUESTIONS.map(q=>q.id)).size),26);
-   assert(!fs.readFileSync(path.join(__dirname,'index.html'),'utf8').match(/<script[^>]+src=|<link[^>]+href=|\bfetch\(|XMLHttpRequest|indexedDB/));
+   assert(!fs.readFileSync(path.join(__dirname,'index.html'),'utf8').match(/<script[^>]+src=|<link[^>]+href=["']https?:|\bfetch\(|XMLHttpRequest|indexedDB/));
   });
   await page.screenshot({path:path.join(__dirname,'preview-desktop.png'),fullPage:true,animations:'disabled'});
   await page.locator('.navigation [data-view="study"]').click();

@@ -1,9 +1,9 @@
 {
-  "checkedAt": "2026-10-01T13:45:31.459Z",
+  "checkedAt": "2026-10-02T05:22:05.861Z",
   "browser": "Google Chrome (Playwright)",
   "url": "http://127.0.0.1:5173/",
   "passed": [
-    "single HTML, no external requests, valid unique question IDs",
+    "embedded learning app, only local PWA assets, valid unique question IDs",
     "all slots initially hidden; only tapped slot opens; closing hides details",
     "show all / hide all / random hides exactly 1–3 rows, for every pattern",
     "no answer or rating controls before reveal, for all 26 questions",
