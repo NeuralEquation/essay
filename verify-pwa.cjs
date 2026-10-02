@@ -11,7 +11,7 @@ const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');
  if(!url.pathname.startsWith('/essay/')){res.writeHead(404);res.end();return;}
  const name=url.pathname.slice('/essay/'.length)||'index.html';
- const allowed=['index.html','sw.js','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/apple-touch-icon.png'];
+ const allowed=['index.html','install.html','sw.js','app.webmanifest','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/apple-touch-icon.png'];
  if(!allowed.includes(name)){res.writeHead(404);res.end();return;}
  let bytes=fs.readFileSync(path.join(__dirname,name));
  if(name==='sw.js'&&update)bytes=Buffer.from(bytes.toString().replace(/const VERSION = '[^']+';/,"const VERSION = 'test-update';"));
@@ -30,11 +30,11 @@ async function check(name,fn){await fn();checks.push(name);console.log('PASS '+n
   await check('worker activated with /essay/ scope; app shell cached',async()=>{
    assert.equal(await page.evaluate(async()=> (await navigator.serviceWorker.ready).scope),url);
    assert((await page.locator('#pwa-status').innerText()).includes('オフラインで使えます'));
-   assert.equal(await page.evaluate(async()=>{const keys=await caches.keys();const c=await caches.open(keys.find(k=>k.startsWith('eiken-body-trainer:')));return(await c.keys()).length;}),5);
+   assert.equal(await page.evaluate(async()=>{const keys=await caches.keys();const c=await caches.open(keys.find(k=>k.startsWith('eiken-body-trainer:')));return(await c.keys()).length;}),6);
   });
   await check('valid standalone manifest, relative launch URL and raster icons',async()=>{
-   const manifest=await (await context.request.get(url+'manifest.webmanifest')).json();
-   assert.equal(manifest.display,'standalone');assert.equal(new URL(manifest.start_url,url).href,url);
+   const manifest=await (await context.request.get(url+'app.webmanifest')).json();
+   assert.equal(manifest.display,'standalone');assert.equal(new URL(manifest.start_url,url).href,url+'index.html?launch=pwa');
    assert.equal(manifest.id,'/essay/');
    assert.equal(new URL(manifest.scope,url).href,url);assert.equal(manifest.icons.length,2);
    for(const icon of manifest.icons){const r=await context.request.get(new URL(icon.src,url).href);assert.equal(r.status(),200);const bytes=await r.body();const n=Number(icon.sizes.split('x')[0]);assert.equal(bytes.readUInt32BE(16),n);assert.equal(bytes.readUInt32BE(20),n);assert(icon.purpose.includes('maskable'));}
@@ -54,6 +54,16 @@ async function check(name,fn){await fn();checks.push(name);console.log('PASS '+n
    await page.evaluate(()=>{window.dispatchEvent(new Event('appinstalled'));document.querySelector('#pwa-install').hidden=false;});
    await page.locator('#pwa-install').click();assert(await page.locator('#pwa-help').isVisible());assert.equal(await page.locator('#pwa-install').getAttribute('aria-expanded'),'true');
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.locator('#pwa-install').click();assert(!await page.locator('#pwa-help').isVisible());
+  });
+  await check('uncached installer uses distinct manifest URL, preserves records and handles install dismissal',async()=>{
+   const stored=await page.evaluate(()=>localStorage.getItem('eiken-body-trainer.learning.v1'));
+   await page.goto(url+'install.html');await page.waitForFunction(()=>document.querySelector('#install').disabled===false);
+   const cdp=await context.newCDPSession(page);const manifest=await cdp.send('Page.getAppManifest');assert.equal(manifest.url,url+'app.webmanifest');assert.equal(manifest.manifest.id,url);assert.equal(manifest.manifest.startUrl,url+'index.html?launch=pwa');
+   await page.evaluate(()=>{const e=new Event('beforeinstallprompt',{cancelable:true});e.prompt=async()=>{window.promptCalls=(window.promptCalls||0)+1;};e.userChoice=Promise.resolve({outcome:'dismissed'});window.dispatchEvent(e);});
+   await page.locator('#install').click();assert.equal(await page.evaluate(()=>window.promptCalls),1);assert((await page.locator('#status').innerText()).includes('キャンセル'));
+   assert.equal(await page.evaluate(()=>localStorage.getItem('eiken-body-trainer.learning.v1')),stored);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.equal(JSON.parse(await page.locator('#diagnostics').textContent()).appId,'/essay/');
+   await page.goto(url);
   });
   await check('updated worker waits for user; update preserves learning and other caches',async()=>{
    await page.evaluate(async()=>{await caches.open('other-pwa-cache');});

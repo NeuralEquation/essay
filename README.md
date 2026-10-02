@@ -8,13 +8,15 @@ GitHub Pagesで配信するPWAです。公開サイトでも学習記録はブ�
 
 ## ホーム画面に追加・オフライン利用
 
+「インストール済み」と表示されて追加できない場合は、[インストール専用ページ](https://neuralequation.github.io/essay/install.html)をChromeの通常タブで開いてください。このページは古い画面キャッシュを使わず、別URLのmanifestで準備します。解消しない場合は、同ページの「インストールできない場合の確認情報」をコピーして確認できます。学習記録を削除する必要はありません。
+
 公開サイトを通信できる状態で開き、「オフラインで使えます」の表示を確認してください。その後は、ページを閉じて開き直してもオフラインで学習できます。
 
 - Android / Galaxy Tab：Chromeのメニュー（⋮）→「アプリをインストール」または「ホーム画面に追加」。アプリ内の追加ボタンが表示される場合は、それも使用できます。
 - iPhone / iPad：Safariの共有メニュー→「ホーム画面に追加」。
 - PC：Chrome / Edgeのアドレスバーのインストールアイコン。
 
-PWA版は `index.html`、`manifest.webmanifest`、`sw.js`、`icons/` で構成します。GitHub Pagesの `/essay/` 配下だけを対象に、画面・教材・アイコンをキャッシュします。更新がある場合は「最新版に更新」を押すと再読み込みします。学習記録は保持します。更新時は `sw.js` のVERSIONを変更してください。
+PWA版は `index.html`、`app.webmanifest`、`sw.js`、`icons/` で構成します。旧manifestは互換用に残しています。GitHub Pagesの `/essay/` 配下だけを対象に、画面・教材・アイコンをキャッシュします。更新がある場合は「最新版に更新」を押すと再読み込みします。学習記録は保持します。更新時は `sw.js` のVERSIONを変更してください。
 
 初回アクセスには通信が必要です。ブラウザーのサイトデータを消すと、オフライン用データと学習記録も消えます。実機でのインストール操作は未確認です。
 
@@ -71,7 +73,7 @@ python -m http.server 5173 --bind 127.0.0.1
 
 2026-10-02、インストール済みChromeをPlaywrightから起動し、ローカルHTTP上で学習機能の14項目を再確認しました。実行結果は `verification-results.json`、再実行用スクリプトは `verify.cjs`、画面は `preview-*.png` です。これらの補助ファイルはアプリの利用には不要です。
 
-PWAはGitHub Pagesと同じ `/essay/` のパスで5項目を確認しました：Service Worker有効化と全アセットのキャッシュ、manifest・アイコン・Chromeのインストール条件、オフラインでのページ開き直しと進捗保存、インストール説明の操作、ユーザー操作による更新と進捗・他アプリのキャッシュ保持。結果は `pwa-verification-results.json`、再実行は `node verify-pwa.cjs` です。実機でのインストール・OSからの起動は未確認です。
+PWAはGitHub Pagesと同じ `/essay/` のパスで6項目を確認しました：Service Worker有効化と全アセットのキャッシュ、manifest・アイコン・Chromeのインストール条件、オフラインでのページ開き直しと進捗保存、インストール説明の操作、専用インストール画面のmanifest・追加処理・記録保持、ユーザー操作による更新と進捗・他アプリのキャッシュ保持。結果は `pwa-verification-results.json`、再実行は `node verify-pwa.cjs` です。実機でのインストール・OSからの起動は未確認です。
 
 | 要件 | 結果 |
 | --- | --- |

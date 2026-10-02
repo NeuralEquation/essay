@@ -1,10 +1,10 @@
 'use strict';
 // Bump VERSION when deploying changes to the offline app shell.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const PREFIX = 'eiken-body-trainer:' + self.registration.scope + ':';
 const CACHE = PREFIX + VERSION;
 const base = self.registration.scope;
-const assets = ['index.html','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/apple-touch-icon.png'].map(p=>new URL(p,base).href);
+const assets = ['index.html','app.webmanifest','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/apple-touch-icon.png'].map(p=>new URL(p,base).href);
 const shell = assets[0];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(assets.map(url=>new Request(url,{cache:'reload'})))));

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#355e49">
+<link rel="manifest" href="./app.webmanifest">
+<link rel="icon" href="./icons/icon-192.png">
+<title>EIKEN BODY TRAINER インストール</title>
+<style>
+:root{color-scheme:light dark;--bg:#f5f6f1;--card:#fff;--ink:#23372f;--line:#dce3d9;--muted:#64746c}*{box-sizing:border-box}body{background:var(--bg);color:var(--ink);font:15px/1.8 system-ui,sans-serif;margin:0;padding:28px 20px}main{max-width:520px;margin:30px auto;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px}img{width:64px;height:64px;border-radius:15px}h1{font-size:22px;line-height:1.5;margin:16px 0}p{font-size:14px}.muted{color:var(--muted);font-size:12px}button,.link{font:inherit;min-height:50px;width:100%;border-radius:11px;padding:12px;cursor:pointer;text-align:center;display:block}button{background:#355e49;border:0;color:#fff;font-weight:650}button:disabled{opacity:.6;cursor:default}.link{border:1px solid var(--line);color:var(--ink);text-decoration:none;margin-top:12px}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #bd6733;outline-offset:4px}.status{padding:13px;background:var(--bg);border-radius:10px;min-height:65px;margin:18px 0;font-size:13px}details{margin-top:24px;font-size:12px}summary{cursor:pointer;padding:10px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--bg);padding:12px;border-radius:10px;font-size:11px}ol{padding-left:22px;font-size:13px}[hidden]{display:none!important}@media(prefers-color-scheme:dark){:root{--bg:#17211d;--card:#202e26;--ink:#ecf1e9;--line:#3b4c40;--muted:#adbeb2}}
+</style>
+</head>
+<body><main><img src="./icons/icon-192.png" alt=""><h1>EIKEN BODY TRAINER<br>インストール専用ページ</h1><p>古い学習画面のキャッシュを使わずに、インストールを準備します。学習記録はそのまま残ります。</p><div id="status" class="status" role="status">準備しています…</div><button id="install" disabled>準備中…</button><div id="help" hidden><ol><li>Galaxy S23のChromeの通常タブで、このページを開きます。</li><li>右上の「⋮」→「ホーム画面に追加」→「インストール」を選びます。</li></ol><p class="muted">「インストール済み」と表示される場合は、下の確認情報をコピーしてお知らせください。サイトデータや学習記録の削除は不要です。</p></div><a class="link" href="./index.html?launch=pwa">学習画面を開く</a><details><summary>インストールできない場合の確認情報</summary><pre id="diagnostics"></pre><button id="copy">確認情報をコピー</button></details></main>
+<script>
+'use strict';
+const status=document.querySelector('#status'),button=document.querySelector('#install');
+let promptEvent=null,ready=false;
+const info={page:location.href,version:3,browser:navigator.userAgent,secure:window.isSecureContext,standalone:matchMedia('(display-mode: standalone)').matches,installEvent:false,worker:'準備中',appId:null,error:null};
+function draw(){document.querySelector('#diagnostics').textContent=JSON.stringify(info,null,2);if(ready){button.disabled=false;button.textContent=promptEvent?'インストールする':'Chromeのインストール方法';}}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();promptEvent=e;info.installEvent=true;if(ready)status.textContent='インストールの準備ができました。下のボタンを押してください。';draw();});
+window.addEventListener('appinstalled',()=>{promptEvent=null;info.installed=true;status.textContent='インストールが完了しました。ホーム画面から開けます。';button.hidden=true;draw();});
+button.addEventListener('click',async()=>{if(promptEvent){const e=promptEvent;promptEvent=null;try{await e.prompt();const result=await e.userChoice;info.choice=result.outcome;if(result.outcome==='dismissed')status.textContent='インストールをキャンセルしました。Chromeのメニューからも追加できます。';}catch(e){info.error=String(e);status.textContent='Chromeのメニューからインストールしてください。';document.querySelector('#help').hidden=false;}draw();}else{document.querySelector('#help').hidden=false;status.textContent='Chromeのメニューからの手順を下に表示しました。';}});
+document.querySelector('#copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(JSON.stringify(info,null,2));document.querySelector('#copy').textContent='コピーしました';}catch(e){document.querySelector('#diagnostics').textContent=JSON.stringify(info,null,2);document.querySelector('#copy').textContent='上の確認情報を選択してコピーしてください';}});
+async function activate(worker){if(!worker)return;if(worker.state==='activated')return;await new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(new Error('更新が完了しませんでした')),15000);function done(){if(worker.state==='activated'){clearTimeout(timeout);worker.removeEventListener('statechange',done);resolve();}else if(worker.state==='redundant'){clearTimeout(timeout);reject(new Error('更新を再試行してください'));}}worker.addEventListener('statechange',done);if(worker.state==='installed')worker.postMessage({type:'ACTIVATE_UPDATE'});else worker.addEventListener('statechange',()=>{if(worker.state==='installed')worker.postMessage({type:'ACTIVATE_UPDATE'});});done();});}
+(async()=>{try{if(!navigator.serviceWorker||!window.isSecureContext)throw new Error('Chromeの通常タブでHTTPSの公開サイトを開いてください');const response=await fetch('./app.webmanifest',{cache:'no-store'});if(!response.ok)throw new Error('設定ファイルを読み込めません');info.appId=(await response.json()).id;const reg=await navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'});await reg.update();await activate(reg.installing||reg.waiting||reg.active);const active=await navigator.serviceWorker.ready;info.worker=active.active?.scriptURL;info.scope=active.scope;info.caches=(await caches.keys()).filter(k=>k.startsWith('eiken-body-trainer:'+active.scope+':'));ready=true;status.textContent=promptEvent?'インストールの準備ができました。下のボタンを押してください。':'オフラインの準備ができました。Chromeのメニューからインストールできます。';}catch(e){info.error=String(e);status.textContent='準備を完了できませんでした。通信を確認して再読み込みしてください。';}draw();})();
+draw();
+</script></body></html>
