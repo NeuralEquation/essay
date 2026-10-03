@@ -213,7 +213,23 @@ async function check(name, run) { await run(); results.push(name); console.log('
   });
   await page.setViewportSize({width:390,height:844});
   await page.locator('.navigation [data-view="home"]').click();
+  await check('mobile navigation, controls and install panel fit without covering content',async()=>{
+   for(const width of [320,360,390]){
+    await page.setViewportSize({width,height:844});
+    assert.equal(await page.locator('.navigation').evaluate(e=>getComputedStyle(e).position),'fixed');
+    const nav=await page.locator('.navigation').boundingBox();assert(Math.abs(nav.y+nav.height-844)<2);
+    const layout=await page.evaluate(()=>({main:document.querySelector('main').getBoundingClientRect().bottom,pwa:document.querySelector('.pwa-panel').getBoundingClientRect().top}));assert(layout.pwa>=layout.main);
+    for(const box of await page.locator('.navigation button').evaluateAll(es=>es.map(e=>e.getBoundingClientRect().height)))assert(box>=44);
+    await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));
+    const reset=await page.locator('[data-action="reset"]').boundingBox();assert(reset.y+reset.height<=nav.y);
+   }
+   await page.setViewportSize({width:1100,height:950});
+   assert.equal(await page.locator('.navigation').evaluate(e=>getComputedStyle(e).position),'static');
+   assert.equal(await page.locator('.nav-icon').first().evaluate(e=>getComputedStyle(e).display),'none');
+   await page.setViewportSize({width:390,height:844});await page.evaluate(()=>window.scrollTo(0,0));
+  });
   await page.screenshot({path:path.join(__dirname,'preview-mobile.png'),fullPage:true,animations:'disabled'});
+  await page.screenshot({path:path.join(__dirname,'preview-mobile-screen.png'),animations:'disabled'});
   await page.emulateMedia({colorScheme:'dark'});
   await check('system dark mode and manual theme toggle',async()=>{
    assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()),'#17211d');
