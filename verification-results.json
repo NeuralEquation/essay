@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-02T15:17:09.149Z",
+  "checkedAt": "2026-10-03T02:04:57.670Z",
   "browser": "Google Chrome (Playwright)",
   "url": "http://127.0.0.1:5173/",
   "passed": [
@@ -16,6 +16,8 @@
     "no horizontal overflow at 320/360/390/768px on home, study, every test type",
     "system dark mode and manual theme toggle",
     "offline operation after page loaded",
+    "theme, study details and per-view position survive reload and tab reopen",
+    "test filters, question, reveal and session survive reload without duplicate counts",
     "corrupt storage is preserved until explicit reset",
     "blocked storage degrades safely and displays a warning"
   ],

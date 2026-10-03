@@ -138,6 +138,7 @@ async function check(name, run) { await run(); results.push(name); console.log('
    assert.equal(await page.evaluate(()=>state.records['A-whole'].fail),1);
    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem(KEY)).records['C-alt-1'].unsure),1);
    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem(KEY)).records['C-alt-2'].good),2);
+   await page.locator('.navigation [data-view="home"]').click();
    assert.match(await page.locator('.stat strong').first().innerText(),/^3/);
   });
   await check('priority fail > unsure > unseen > good; avoids immediate repeats',async()=>{
@@ -231,6 +232,59 @@ async function check(name, run) { await run(); results.push(name); console.log('
    await page.locator('[data-action="rate"][data-rating="unsure"]').click();
    assert.equal(await page.evaluate(()=>Object.values(state.records).reduce((n,r)=>n+r.unsure,0)),1);
    await context.setOffline(false);
+  });
+  await check('theme, study details and per-view position survive reload and tab reopen',async()=>{
+   await page.emulateMedia({colorScheme:'light'});
+   if(await page.evaluate(()=>document.documentElement.dataset.theme)!=='dark')await page.locator('#theme').click();
+   await page.locator('.navigation [data-view="study"]').click();
+   for(const id of ['A','B','C']){
+    if(await page.locator(`[data-action="pattern"][data-pattern="${id}"]`).getAttribute('aria-expanded')==='false')await page.locator(`[data-action="pattern"][data-pattern="${id}"]`).click();
+    await page.locator(`[data-action="all"][data-pattern="${id}"][data-show="yes"]`).click();
+   }
+   await page.locator('[data-action="detail"][data-id="C-1"][data-kind="explain"]').click();
+   const records=await page.evaluate(key=>localStorage.getItem(key),KEY);
+   await page.evaluate(()=>window.scrollTo(0,900));
+   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('eiken-body-trainer.ui.v1')).scrollPositions.study>800);
+   const y=await page.evaluate(()=>scrollY);
+   await page.reload();
+   await page.waitForFunction(y=>view==='study'&&Math.abs(scrollY-y)<3,y);
+   assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'dark');
+   assert(await page.locator('#C-1-explain').isVisible());
+   assert.equal(await page.locator('#pattern-C .slot-toggle[aria-expanded="true"]').count(),4);
+   assert.equal(await page.evaluate(key=>localStorage.getItem(key),KEY),records);
+   await page.evaluate(()=>document.querySelector('.navigation [data-view="home"]').click());
+   await page.waitForFunction(()=>!restoringScroll);
+   await page.evaluate(()=>document.querySelector('.navigation [data-view="study"]').click());
+   await page.waitForFunction(y=>Math.abs(scrollY-y)<3,y);
+   const reopened=await context.newPage();await reopened.goto('http://127.0.0.1:5173/');
+   await reopened.waitForFunction(y=>view==='study'&&Math.abs(scrollY-y)<3,y);
+   assert.equal(await reopened.evaluate(()=>document.documentElement.dataset.theme),'dark');
+   assert(await reopened.locator('#C-1-explain').isVisible());await reopened.close();
+   await page.locator('#theme').click();await page.reload();
+   assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'light');
+  });
+  await check('test filters, question, reveal and session survive reload without duplicate counts',async()=>{
+   await page.locator('.navigation [data-view="test"]').click();
+   await page.locator('[data-action="filter"][data-filter="grammar"]').click();
+   await page.locator('#pattern-filter').selectOption('C');
+   await page.locator('[data-action="reveal"]').click();
+   await page.locator('[data-action="rate"][data-rating="good"]').click();
+   await page.locator('[data-action="reveal"]').click();
+   const before=await page.evaluate(key=>({records:localStorage.getItem(key),id:current.id,completed,sessionGood,previous}),KEY);
+   await page.reload();
+   assert.equal(await page.evaluate(()=>view),'test');
+   assert.equal(await page.locator('#pattern-filter').inputValue(),'C');
+   assert.equal(await page.locator('[data-filter="grammar"]').getAttribute('aria-pressed'),'true');
+   assert.equal(await page.locator('[data-action="reveal"]').getAttribute('aria-expanded'),'true');
+   assert.deepEqual(await page.evaluate(key=>({records:localStorage.getItem(key),id:current.id,completed,sessionGood,previous}),KEY),before);
+   await page.locator('[data-action="rate"][data-rating="good"]').click();
+   assert.equal(await page.evaluate(()=>completed),2);
+   const records=await page.evaluate(key=>localStorage.getItem(key),KEY);
+   const invalidPage=await context.newPage();
+   await invalidPage.addInitScript(()=>localStorage.setItem('eiken-body-trainer.ui.v1','invalid-json'));
+   await invalidPage.goto('http://127.0.0.1:5173/');
+   assert.equal(await invalidPage.evaluate(()=>view),'home');
+   assert.equal(await invalidPage.evaluate(key=>localStorage.getItem(key),KEY),records);await invalidPage.close();
   });
   await check('corrupt storage is preserved until explicit reset',async()=>{
    await page.evaluate(key=>localStorage.setItem(key,'invalid-json'),KEY);

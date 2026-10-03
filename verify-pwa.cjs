@@ -42,10 +42,17 @@ async function check(name,fn){await fn();checks.push(name);console.log('PASS '+n
    const cdp=await context.newCDPSession(page);const installability=await cdp.send('Page.getInstallabilityErrors');assert.deepEqual(installability.installabilityErrors,[]);
    const parsed=await cdp.send('Page.getAppManifest');assert.equal(parsed.manifest.id,url);
   });
+  await page.locator('#theme').click();
+  const chosenTheme=await page.evaluate(()=>document.documentElement.dataset.theme);
+  await page.locator('.navigation [data-view="study"]').click();await page.locator('[data-action="pattern"][data-pattern="C"]').click();await page.locator('[data-action="slot"][data-id="C-1"]').click();
   await page.locator('.navigation [data-view="test"]').click();await page.locator('[data-action="reveal"]').click();await page.locator('[data-rating="good"]').click();
+  const savedQuestion=await page.evaluate(()=>current.id);
   await check('offline cold page open, query navigation, test and persisted progress',async()=>{
    await context.setOffline(true);await page.close();page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
    await page.goto(url);assert.equal(await page.evaluate(()=>state.streak),1);
+   assert.equal(await page.evaluate(()=>view),'test');assert.equal(await page.evaluate(()=>current.id),savedQuestion);
+   assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),chosenTheme);
+   assert.equal(await page.evaluate(()=>studyOpen.C&&slotOpen['C-1']),true);
    await page.goto(url+'index.html?offline=1');assert.equal(await page.evaluate(()=>state.streak),1);
    await page.locator('.navigation [data-view="test"]').click();await page.locator('[data-action="reveal"]').click();await page.locator('[data-rating="unsure"]').click();
    await page.reload();assert.equal(await page.evaluate(()=>Object.values(state.records).reduce((n,r)=>n+r.unsure,0)),1);
@@ -74,6 +81,8 @@ async function check(name,fn){await fn();checks.push(name);console.log('PASS '+n
    assert.equal(await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return r.waiting?.state;}),'installed');
    await Promise.all([page.waitForNavigation(),page.locator('#pwa-update').click()]);
    assert.equal(await page.evaluate(()=>localStorage.getItem('eiken-body-trainer.learning.v1')),stored);
+   assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),chosenTheme);
+   assert.equal(await page.evaluate(()=>studyOpen.C&&slotOpen['C-1']),true);
    const keys=await page.evaluate(()=>caches.keys());assert(keys.includes('other-pwa-cache'));assert(keys.some(k=>k.endsWith(':test-update')));assert(!keys.some(k=>k.startsWith('eiken-body-trainer:')&&k.endsWith(':'+originalVersion)));
    await context.setOffline(true);await page.reload();assert.equal(await page.evaluate(()=>localStorage.getItem('eiken-body-trainer.learning.v1')),stored);await context.setOffline(false);
   });
